@@ -40,9 +40,23 @@ function displayName(user, profile) {
     return profile?.name || profile?.displayName || user?.displayName || user?.email?.split("@")[0] || "User";
 }
 
-async function loadUserProfile(uid) {
-    const snap = await getDoc(doc(db, "users", uid));
-    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+async function loadUserProfile(user) {
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (snap.exists()) {
+        return { id: snap.id, ...snap.data() };
+    }
+    
+    // Fallback: query by email if UID was mistyped during provisioning
+    if (user.email) {
+        const { collection, query, where, getDocs } = await import("./firebase.js");
+        const q = query(collection(db, "users"), where("email", "==", user.email.toLowerCase()));
+        const docsSnap = await getDocs(q);
+        if (!docsSnap.empty) {
+            const first = docsSnap.docs[0];
+            return { id: first.id, ...first.data() };
+        }
+    }
+    return null;
 }
 
 async function loadCompany(companyId) {
@@ -96,7 +110,7 @@ function renderDashboard(user, profile, company) {
 
 async function handleSignedIn(user) {
     setError("");
-    const profile = await loadUserProfile(user.uid);
+    const profile = await loadUserProfile(user);
     if (!profile || profile.status !== "active") {
         setError("Your account is inactive or not provisioned. Contact your administrator.");
         await signOut(auth);
