@@ -52,23 +52,13 @@ function displayName(user, profile) {
 }
 
 async function loadUserProfile(user) {
-  const snap = await getDoc(doc(db, "users", user.uid));
-  if (snap.exists()) {
-    return { id: snap.id, ...snap.data() };
-  }
-
-  // Fallback: query by email if UID was mistyped during provisioning
-  if (user.email) {
-    const { collection, query, where, getDocs } = await import("./firebase.js");
-    const q = query(
-      collection(db, "users"),
-      where("email", "==", user.email.toLowerCase()),
-    );
-    const docsSnap = await getDocs(q);
-    if (!docsSnap.empty) {
-      const first = docsSnap.docs[0];
-      return { id: first.id, ...first.data() };
+  try {
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (snap.exists()) {
+      return { id: snap.id, ...snap.data() };
     }
+  } catch (err) {
+    console.warn("Could not load user profile:", err);
   }
   return null;
 }
