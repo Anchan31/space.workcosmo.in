@@ -62,25 +62,32 @@ export function isModuleEnabled(company, moduleKey) {
   return false;
 }
 
-export function buildModuleUrl(moduleKey, companyId) {
+export function buildModuleUrl(moduleKey, companyId, ssoToken = "") {
   const mod = WORKCOSMO_MODULES.find((item) => item.key === moduleKey);
   const cid = encodeURIComponent(companyId || "");
   if (!mod || !cid) return "#";
 
   const host = window.location.hostname.toLowerCase();
   const isLocal = host === "localhost" || host === "127.0.0.1" || host === "";
+  
+  let url = "";
   if (isLocal) {
     if (moduleKey === "hire") {
-      return `http://localhost:8091/app/index.html?companyId=${cid}`;
+      url = `http://localhost:8091/app/index.html?companyId=${cid}`;
+    } else if (moduleKey === "core") {
+      url = `http://localhost:8093/index.html?companyId=${cid}`;
+    } else if (moduleKey === "perform") {
+      url = `http://localhost:8094/index.html?companyId=${cid}`;
+    } else {
+      return "#";
     }
-    if (moduleKey === "core") {
-      return `http://localhost:8093/index.html?companyId=${cid}`;
-    }
-    if (moduleKey === "perform") {
-      return `http://localhost:8094/index.html?companyId=${cid}`;
-    }
-    return "#";
+  } else {
+    url = `https://${mod.subdomain}.workcosmo.in/${cid}`;
   }
 
-  return `https://${mod.subdomain}.workcosmo.in/${cid}`;
+  if (ssoToken) {
+    const separator = url.includes("?") ? "&" : "?";
+    url += `${separator}ssoToken=${encodeURIComponent(ssoToken)}`;
+  }
+  return url;
 }

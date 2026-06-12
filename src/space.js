@@ -105,6 +105,40 @@ function renderModules(company) {
   els.modulesGrid.querySelectorAll("[aria-disabled='true']").forEach((card) => {
     card.addEventListener("click", (event) => event.preventDefault());
   });
+
+  els.modulesGrid.querySelectorAll(".module-card:not([aria-disabled='true'])").forEach((card) => {
+    card.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const moduleKey = card.getAttribute("data-module");
+      const label = card.querySelector(".module-state");
+      const originalText = label.textContent;
+
+      try {
+        label.textContent = "Launching...";
+        card.style.pointerEvents = "none";
+
+        const user = auth.currentUser;
+        if (!user) {
+          throw new Error("No active session in Space");
+        }
+
+        // Fetch fresh ID token
+        const idToken = await user.getIdToken(true);
+
+        // Build URL with SSO token query parameter
+        const url = buildModuleUrl(moduleKey, cid, idToken);
+
+        // Redirect
+        window.location.href = url;
+      } catch (err) {
+        console.error("SSO launch failed:", err);
+        label.textContent = originalText;
+        card.style.pointerEvents = "";
+        // Fallback: direct navigation without SSO token
+        window.location.href = buildModuleUrl(moduleKey, cid);
+      }
+    });
+  });
 }
 
 function renderDashboard(user, profile, company) {
